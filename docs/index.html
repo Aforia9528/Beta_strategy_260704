@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#0e1117">
+<link rel="manifest" href="manifest.webmanifest">
+<title>베타2x 리밸런스</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <h1>📈 IA_BETA_01_2X 리밸런스</h1>
+
+  <div id="banner" class="muted">불러오는 중…</div>
+  <div id="gatebox"></div>
+
+  <h2>🎯 오늘 목표비율</h2>
+  <div id="targets" class="cards"></div>
+  <div id="basis" class="muted small"></div>
+
+  <h2>💼 내 보유 입력 <span class="muted small">(원화 ₩)</span></h2>
+  <p class="muted small">브로커의 <b>현재 평가액</b>을 입력. DBMF는 <b>원화환산 평가액</b>으로. (실시간 가격=브로커가 소스)</p>
+  <div class="grid2">
+    <label>QLD (2x나스닥)<input type="number" id="v_qld" inputmode="numeric" placeholder="0"></label>
+    <label>금 (GLD)<input type="number" id="v_gold" inputmode="numeric" placeholder="0"></label>
+    <label>DBMF (원화환산)<input type="number" id="v_dbmf" inputmode="numeric" placeholder="0"></label>
+    <label>현금 (파킹)<input type="number" id="v_cash" inputmode="numeric" placeholder="0"></label>
+  </div>
+  <label class="full">💵 오늘 추가 투자(적립, 없으면 0)<input type="number" id="deposit" inputmode="numeric" placeholder="0"></label>
+
+  <h2>⚖️ 매매 판정</h2>
+  <div id="decision"></div>
+  <button id="recordBtn" class="btn">📝 이 상태로 기록하기</button>
+
+  <details>
+    <summary>📒 기록 저널 (<span id="journalCount">0</span>건)</summary>
+    <div id="journal"></div>
+    <div class="row">
+      <button id="exportBtn" class="btn ghost">CSV 내보내기</button>
+      <button id="clearBtn" class="btn ghost danger">전체 삭제</button>
+    </div>
+  </details>
+
+  <details>
+    <summary>📊 데이터 검증 (야후/증권사 대조)</summary>
+    <div id="prices"></div>
+  </details>
+
+  <details>
+    <summary>📋 로직 상세설명서 (재현·검증용)</summary>
+    <button id="copySpecBtn" class="btn ghost">📎 재현 프롬프트 복사</button>
+    <div id="spec" class="spec"></div>
+  </details>
+
+  <details>
+    <summary>▸ 규칙 / 설정</summary>
+    <div id="rules" class="small"></div>
+  </details>
+
+  <div class="muted small" id="footer"></div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>

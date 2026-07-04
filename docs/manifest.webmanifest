@@ -1,0 +1,12 @@
+{
+  "name": "베타2x 리밸런스",
+  "short_name": "베타2x",
+  "description": "IA_BETA_01_2X 리밸런스 어드바이저",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0e1117",
+  "theme_color": "#0e1117",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
