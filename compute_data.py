@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """IA_BETA_01_2X 신호계산 → docs/data.json 생성 (매일 GitHub Action 실행).
-최종 config: QLD vol-target + wq데드밴드5%p + SPY200게이트 + 금60/DBMF40 + 4자산자유리밸(5%밴드).
+최종 config: QLD vol-target + wq데드밴드5%p + SPY200게이트 + 금50/DBMF50 + 4자산자유리밸(5%밴드).
 신호=미국 종가(yfinance). 상태는 400일 재계산(저장 불필요, 경로의존 replay).
 데이터 검증/로직스펙 값도 함께 산출해 프론트가 그대로 렌더."""
 import json, datetime, sys
@@ -9,7 +9,7 @@ import numpy as np, pandas as pd, yfinance as yf
 # ===== LOCKED config =====
 TARGET, WIN, FLOOR, CAP, INC = 0.20, 16, 0.20, 1.0, 0.15
 DEADBAND = 0.05
-GOLD_FRAC, DBMF_FRAC, H_CAP = 0.60, 0.40, 0.60
+GOLD_FRAC, DBMF_FRAC, H_CAP = 0.50, 0.50, 0.60
 BAND, MIN_TRADE = 0.05, 0.005
 GATE_TICKER, GATE_MA, GATE_MULT = "SPY", 200, 0.5
 TICKERS = ["QLD", "GLD", "DBMF", "SGOV", "SPY"]

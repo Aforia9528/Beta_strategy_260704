@@ -51,7 +51,7 @@ function renderTargets(d) {
     `<div class="card"><div class="k">${lab[a]}</div><div class="v">${pct(t[a], 0)}</div></div>`).join("");
   document.getElementById("basis").innerHTML =
     `근거: QLD 16일변동성 <b>${pct(d.vol, 0)}</b> → 원시노출 ${d.te.toFixed(2)} → 비대칭·데드밴드 후 ` +
-    `QLD <b>${pct(d.wq_final)}</b> (나스닥 ${(d.wq_final * 2).toFixed(2)}배) · 바스켓 금60/DBMF40`;
+    `QLD <b>${pct(d.wq_final)}</b> (나스닥 ${(d.wq_final * 2).toFixed(2)}배) · 바스켓 금50/DBMF50`;
 }
 function renderDecision() {
   const hold = {

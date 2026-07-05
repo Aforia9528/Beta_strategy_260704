@@ -1,10 +1,10 @@
 {
   "asof": "2026-07-02",
-  "generated_utc": "2026-07-04 14:18:21",
+  "generated_utc": "2026-07-05 03:38:45",
   "target": {
     "QLD": 0.2866,
-    "gold": 0.36,
-    "dbmf": 0.24,
+    "gold": 0.3,
+    "dbmf": 0.3,
     "cash": 0.1134
   },
   "vol": 0.6506,
@@ -289,8 +289,8 @@
     "CAP": 1.0,
     "INC": 0.15,
     "DEADBAND": 0.05,
-    "GOLD_FRAC": 0.6,
-    "DBMF_FRAC": 0.4,
+    "GOLD_FRAC": 0.5,
+    "DBMF_FRAC": 0.5,
     "H_CAP": 0.6,
     "BAND": 0.05,
     "MIN_TRADE": 0.005,
