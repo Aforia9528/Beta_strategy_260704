@@ -1,0 +1,29 @@
+name: analysis-kodex-backtest
+on:
+  push:
+    branches: [analysis-kodex-409820-20260809]
+    paths:
+      - analysis_kodex_backtest.py
+      - .github/workflows/analysis-kodex.yml
+permissions:
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: analysis-kodex-409820-20260809
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install --quiet yfinance pandas numpy
+      - name: run backtest
+        run: python analysis_kodex_backtest.py > analysis_kodex_result.txt
+      - name: save result
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add analysis_kodex_result.txt
+          git commit -m 'analysis: save KODEX backtest result' || exit 0
+          git push origin HEAD:analysis-kodex-409820-20260809
