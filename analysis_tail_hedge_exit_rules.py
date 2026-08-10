@@ -28,4 +28,5 @@ for rule in RULES:
  vals=[]
  for s in SETS:
   z=overlay_exit(s,rule);m=a.met(z);bm=a.BM[s];x={'Set':s,'CAGR':m['CAGR'],'Sharpe':m['Sharpe'],'MDD':m['MDD'],'Calmar':m['Calmar'],'SpendYr':m['SpendYr'],'dCAGR':m['CAGR']-bm['CAGR'],'dSharpe':m['Sharpe']-bm['Sharpe'],'dMDD':m['MDD']-bm['MDD'],'dCalmar':m['Calmar']-bm['Calmar']};vals.append(x);print('SET',rule,json.dumps(x))
- print('AVG',rule,json.dumps({k:float(np.mean([x[k] for x in vals])) for k in vals[0]}))
+ keys=['CAGR','Sharpe','MDD','Calmar','SpendYr','dCAGR','dSharpe','dMDD','dCalmar']
+ print('AVG',rule,json.dumps({k:float(np.mean([x[k] for x in vals])) for k in keys}))
