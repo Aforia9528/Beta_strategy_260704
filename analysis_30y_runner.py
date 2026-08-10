@@ -27,6 +27,14 @@ if old_parser not in s:
     raise SystemExit('AQR parser block not found')
 s=s.replace(old_parser,new_parser)
 
+# AQR dates are business month-ends while FRED/gold resamples use calendar month-ends.
+# Normalize by month before arithmetic; otherwise weekend month-ends silently disappear.
+anchor="ash,ah,acol,tsmom=parse_aqr();print("
+replacement="ash,ah,acol,tsmom=parse_aqr();tsmom.index=pd.DatetimeIndex(tsmom.index)+pd.offsets.MonthEnd(0);tsmom=tsmom.groupby(tsmom.index).last();print("
+if anchor not in s:
+    raise SystemExit('AQR normalization anchor not found')
+s=s.replace(anchor,replacement,1)
+
 extra = r'''
 
 print('EXTRA_DIAGNOSTICS')
