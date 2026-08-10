@@ -33,7 +33,6 @@ def hybrid_strategy(extra_financing=0.0,hcap=.70,mf_scale=None,mf_fee=.01,gold_d
     gret,mfret,cashret=make_monthly_components(mf_scale,mf_fee,gold_drag,fx_mf,fx_cash)
     gd=expand_monthly_lump(gret,idx);md=expand_monthly_lump(mfret,idx);cd=expand_monthly_lump(cashret,idx)
     A=pd.DataFrame({'q':er,'gold':gd,'mf':md,'cash':cd},index=idx)
-    # only keep months where all long monthly defensive sources exist
     valid_months=set(gret.dropna().index.to_period('M')).intersection(mfret.dropna().index.to_period('M')).intersection(cashret.dropna().index.to_period('M'))
     keep=A.index.to_period('M').isin(valid_months);A=A.loc[keep];qsig=qsig.reindex(A.index)
     wc=None;rows=[];turn=0.;nt=0
@@ -50,7 +49,7 @@ def hybrid_strategy(extra_financing=0.0,hcap=.70,mf_scale=None,mf_fee=.01,gold_d
     return d,m
 
 def report_hybrid(label,**kw):
-    d,m=hybrid_strategy(**kw);met=metrics_ret(m);met.update(rolling_stats(m));met['DailyTradeCount']=d.attrs['ntrade'];met['DailyTurnover']=d.attrs['turn'];print('HYBRID_FULL',label,json.dumps(met));
+    d,m=hybrid_strategy(**kw);met=metrics_ret(m);met.update(rolling_stats(m));met['DailyTradeCount']=d.attrs['ntrade'];met['DailyTurnover']=d.attrs['turn'];met['NMonths']=len(m);print('HYBRID_FULL',label,json.dumps(met));
     for nm,a,b in [('BLACK_MONDAY','1987-08-01','1988-03-31'),('PRE_DOTCOM','1990-01-01','1999-12-31'),('DOTCOM','2000-01-01','2002-12-31'),('LOST_DECADE','2000-01-01','2009-12-31'),('GFC','2007-01-01','2009-06-30'),('POST_GFC','2010-01-01','2019-12-31'),('RECENT','2020-01-01','2026-12-31')]:
         print('HYBRID_REGIME',label,nm,json.dumps(submetric(m,a,b)))
     print('HYBRID_DD',label,json.dumps(dd_diag(m)))
@@ -73,7 +72,6 @@ for label,kw in {
 }.items():
     HOUT[label]=report_hybrid(label,**kw)
 
-# Component attribution diagnostics in problem eras (monthly component returns and target q).
 def component_diag(a,b):
     gret,mfret,cashret=make_monthly_components();er=month_ret_from_daily(syn);qm_sig=Q.resample('ME').last()
     R=pd.concat({'q2x':er,'gold':gret,'mf':mfret,'cash':cashret,'target_q_end':qm_sig},axis=1).loc[a:b]
@@ -84,22 +82,18 @@ def component_diag(a,b):
     return out
 for nm,a,b in [('DRAWDOWN_1986_90','1986-04-01','1990-10-31'),('DOTCOM','2000-01-01','2002-12-31'),('GFC','2007-01-01','2009-06-30')]:print('COMPONENT_DIAG',nm,json.dumps(component_diag(a,b)))
 
-# Bridge the synthetic hybrid to the existing production-proxy backtests on the overlapping history.
+# Best-effort in-process bridge; a separate fresh-process bridge is used for final validation.
 buf=io.StringIO()
 with contextlib.redirect_stdout(buf):
     import analysis_production_summary_dca as prod
-
-def monthly_metric_from_daily_return(r):
-    m=(1+r.dropna()).resample('ME').prod()-1
-    return metrics_ret(m)
 base_hm=HOUT['BASE'][1]
 for s in ['RY','AQ','WT','DB']:
     actual=(1+prod.Z[s].ret).resample('ME').prod()-1
     ix=actual.index.intersection(base_hm.index);aa=actual.reindex(ix).dropna();ss=base_hm.reindex(ix).dropna();ix=aa.index.intersection(ss.index);aa=aa.reindex(ix);ss=ss.reindex(ix)
-    print('OVERLAP_BRIDGE',s,json.dumps({'actual':metrics_ret(aa),'synthetic_hybrid':metrics_ret(ss),'monthly_corr':float(aa.corr(ss)),'mean_return_diff_ann':float((ss-aa).mean()*12)}))
+    print('OVERLAP_BRIDGE',s,json.dumps({'N':len(ix),'actual':metrics_ret(aa),'synthetic_hybrid':metrics_ret(ss),'monthly_corr':float(aa.corr(ss)),'mean_return_diff_ann':float((ss-aa).mean()*12)}))
 
-# Save compact hybrid summary.
 rows=[]
 for label,(d,m) in HOUT.items():
-    x=metrics_ret(m);x.update(rolling_stats(m));x['Variant']=label;rows.append(x)
+    x=metrics_ret(m);x.update(rolling_stats(m));x['Variant']=label;x['NMonths']=len(m);rows.append(x)
 pd.DataFrame(rows).to_csv('analysis_30y_hybrid_summary.csv',index=False)
+HOUT['BASE'][1].rename('ret').to_csv('analysis_30y_hybrid_base_monthly.csv',index_label='Date')
