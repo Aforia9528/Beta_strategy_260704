@@ -18,17 +18,21 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install --quiet yfinance pandas numpy openpyxl requests
-      - name: Patch long gold source
+      - name: Patch long sources/parser
         run: |
           python - <<'PY'
           from pathlib import Path
           p=Path('analysis_30y_synthetic_dotcom.py')
           s=p.read_text()
-          old="rg=requests.get(STOOQ_GOLD,headers={'User-Agent':'Mozilla/5.0'},timeout=45);rg.raise_for_status()\ngold_df=pd.read_csv(io.StringIO(rg.text));gold_df.columns=[c.capitalize() for c in gold_df.columns];gold_df['Date']=pd.to_datetime(gold_df.Date);gold=gold_df.set_index('Date')['Close'].astype(float).sort_index();gold=gold.loc[gold.index>=pd.Timestamp(START)]"
-          new="gold_df=pd.read_csv('https://raw.githubusercontent.com/datasets/gold-prices/main/data/monthly.csv');gold_df['Date']=pd.to_datetime(gold_df['Date'])+pd.offsets.MonthEnd(0);gold=gold_df.set_index('Date')['Price'].astype(float).sort_index();gold=gold.loc[gold.index>=pd.Timestamp(START)]"
-          if old not in s:
-              raise SystemExit('gold source block not found')
-          p.write_text(s.replace(old,new))
+          old_gold="rg=requests.get(STOOQ_GOLD,headers={'User-Agent':'Mozilla/5.0'},timeout=45);rg.raise_for_status()\ngold_df=pd.read_csv(io.StringIO(rg.text));gold_df.columns=[c.capitalize() for c in gold_df.columns];gold_df['Date']=pd.to_datetime(gold_df.Date);gold=gold_df.set_index('Date')['Close'].astype(float).sort_index();gold=gold.loc[gold.index>=pd.Timestamp(START)]"
+          new_gold="gold_df=pd.read_csv('https://raw.githubusercontent.com/datasets/gold-prices/main/data/monthly.csv');gold_df['Date']=pd.to_datetime(gold_df['Date'])+pd.offsets.MonthEnd(0);gold=gold_df.set_index('Date')['Price'].astype(float).sort_index();gold=gold.loc[gold.index>=pd.Timestamp(START)]"
+          if old_gold not in s: raise SystemExit('gold source block not found')
+          s=s.replace(old_gold,new_gold)
+          old_parser="""            nums={}\n            for c in dfi.columns:\n                if c==datecol:continue\n                z=pd.to_numeric(dfi.loc[ok,c],errors='coerce')\n                if z.notna().sum()>100: nums[c]=z\n            if not nums:continue\n            tmp=pd.DataFrame(nums,index=dd[ok]);tmp=tmp[~tmp.index.duplicated()].sort_index()"""
+          new_parser="""            nums={}\n            for j,c in enumerate(dfi.columns):\n                if c==datecol:continue\n                z=pd.to_numeric(dfi.loc[ok].iloc[:,j],errors='coerce')\n                if z.notna().sum()>100: nums[f'{c}__{j}']=z.to_numpy()\n            if not nums:continue\n            tmp=pd.DataFrame(nums,index=pd.DatetimeIndex(dd[ok].to_numpy()));tmp=tmp[~tmp.index.duplicated()].sort_index()"""
+          if old_parser not in s: raise SystemExit('AQR parser block not found')
+          s=s.replace(old_parser,new_parser)
+          p.write_text(s)
           PY
       - run: python analysis_30y_synthetic_dotcom.py > analysis_30y_synthetic_dotcom_result.txt
       - run: |
