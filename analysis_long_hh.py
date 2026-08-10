@@ -11,7 +11,6 @@ def dl(t):
 raw={k:dl(v) for k,v in T.items()}
 print('DATA_STARTS',{k:str(v.index[0].date()) for k,v in raw.items()})
 
-# signal path from QLD + SPY; independent of FX implementation
 us=pd.concat({'q':raw['QLD'],'spy':raw['SPY']},axis=1).dropna()
 rq=us.q.pct_change(); vol=rq.rolling(WIN).std()*np.sqrt(252); te=np.clip((TARGET/vol).values,FLOOR,CAP)
 cur=0.; asym=[]
@@ -27,7 +26,6 @@ for g in gated:
     qw.append(last)
 qsignal=pd.Series(qw,index=us.index+pd.Timedelta(days=1),name='q')
 
-
 def target_df(idx,gfrac=.5):
     q=qsignal.reindex(idx,method='ffill').dropna(); out=[]
     for x in q:
@@ -39,18 +37,14 @@ def price_frame(start,mfkey,gold_actual=False,qhedged=True,ghedged=True,cashkey=
     if gold_actual: keys+=['GOLD_H']
     idx=pd.DatetimeIndex(sorted(set().union(*[set(raw[k].index) for k in keys]))); idx=idx[idx>=pd.Timestamp(start)]
     def ff(k): return raw[k].reindex(idx).ffill()
-    fx=ff('FX')
-    q=ff('QLD') if qhedged else ff('QLD')*fx
-    if gold_actual: gh=ff('GOLD_H'); gu=ff('GLD')*fx; g=gh if ghedged else gu
+    fx=ff('FX'); q=ff('QLD') if qhedged else ff('QLD')*fx
+    if gold_actual: g=ff('GOLD_H') if ghedged else ff('GLD')*fx
     else: g=ff('GLD') if ghedged else ff('GLD')*fx
     mf=ff(mfkey)*fx; cash=ff(cashkey)*fx
-    P=pd.DataFrame({'q':q,'gold':g,'mf':mf,'cash':cash},index=idx).dropna()
-    return P
+    return pd.DataFrame({'q':q,'gold':g,'mf':mf,'cash':cash},index=idx).dropna()
 
-def sim(start,mfkey,gold_actual=False,qhedged=True,ghedged=True,gfrac=.5,cashkey='BIL',weekly=False):
-    P=price_frame(start,mfkey,gold_actual,qhedged,ghedged,cashkey)
-    if weekly: P=P.resample('W-FRI').last().dropna()
-    R=P.pct_change().dropna(); W=target_df(R.index,gfrac); R=R.loc[W.index]
+def sim(start,mfkey,gold_actual=False,qhedged=True,ghedged=True,gfrac=.5,cashkey='BIL'):
+    P=price_frame(start,mfkey,gold_actual,qhedged,ghedged,cashkey); R=P.pct_change().dropna(); W=target_df(R.index,gfrac); R=R.loc[W.index]
     nav=1.; wc=W.iloc[0].values.astype(float); rows=[]; turnover=0.
     for dt in R.index:
         wt=W.loc[dt].values.astype(float)
@@ -60,38 +54,33 @@ def sim(start,mfkey,gold_actual=False,qhedged=True,ghedged=True,gfrac=.5,cashkey
         gross=wc*(1+rr); wc=gross/gross.sum(); rows.append((dt,pr,nav))
     z=pd.DataFrame(rows,columns=['date','ret','nav']).set_index('date'); z.attrs['turnover']=turnover; return z
 
-def met(z):
+def met(z,rebase=False):
     r=z.ret; yrs=(z.index[-1]-z.index[0]).days/365.25; ppy=len(r)/yrs
-    c=float(z.nav.iloc[-1]**(1/yrs)-1); v=float(r.std()*np.sqrt(ppy)); sh=float(r.mean()*ppy/v)
-    neg=r[r<0].std()*np.sqrt(ppy); so=float(r.mean()*ppy/neg); m=float((z.nav/z.nav.cummax()-1).min()); cal=float(c/abs(m))
-    return {'start':str(z.index[0].date()),'end':str(z.index[-1].date()),'yrs':yrs,'CAGR':c,'Vol':v,'Sharpe0':sh,'Sortino0':so,'MDD':m,'Calmar':cal,'End':float(z.nav.iloc[-1]),'turn':z.attrs.get('turnover',0)}
+    if rebase:
+        growth=float(np.prod(1+r.values))
+    else: growth=float(z.nav.iloc[-1])
+    c=growth**(1/yrs)-1; v=float(r.std()*np.sqrt(ppy)); sh=float(r.mean()*ppy/v)
+    neg=r[r<0].std()*np.sqrt(ppy); so=float(r.mean()*ppy/neg); eq=(1+r).cumprod() if rebase else z.nav
+    m=float((eq/eq.cummax()-1).min()); cal=float(c/abs(m))
+    return {'start':str(z.index[0].date()),'end':str(z.index[-1].date()),'yrs':yrs,'CAGR':c,'Vol':v,'Sharpe0':sh,'Sortino0':so,'MDD':m,'Calmar':cal,'End':growth,'turn':z.attrs.get('turnover',0)}
 def rolling5(z):
-    # calendar 5y windows every ~quarter (63 obs for daily-union-ish not fixed); use dates exactly
     vals=[]
-    starts=z.index[::63]
-    for s in starts:
-        e=s+pd.DateOffset(years=5); zz=z[(z.index>=s)&(z.index<=e)]
-        if len(zz)<500: continue
-        mm=met(zz); vals.append((mm['CAGR'],mm['Sharpe0'],mm['MDD'],mm['Calmar']))
+    for s in z.index[::63]:
+        zz=z[(z.index>=s)&(z.index<=s+pd.DateOffset(years=5))]
+        if (zz.index[-1]-zz.index[0]).days<365*4.8: continue
+        mm=met(zz,True); vals.append((mm['CAGR'],mm['Sharpe0'],mm['MDD'],mm['Calmar']))
     a=np.array(vals)
-    if len(a)==0:return {}
     return {'n':len(a),'CAGR_med':float(np.median(a[:,0])),'CAGR_min':float(np.min(a[:,0])),'Sharpe_med':float(np.median(a[:,1])),'Sharpe_min':float(np.min(a[:,1])),'MDD_med':float(np.median(a[:,2])),'MDD_worst':float(np.min(a[:,2])),'Calmar_med':float(np.median(a[:,3])),'Calmar_min':float(np.min(a[:,3]))}
 
 def report(label,start,mfkey,gold_actual=False,cashkey='BIL'):
     print('\n===',label,'===')
     for qh,gh,nm in [(1,1,'HH'),(1,0,'HU'),(0,1,'UH'),(0,0,'UU')]:
-        z=sim(start,mfkey,gold_actual,bool(qh),bool(gh),.5,cashkey,False); print(nm,met(z)); print(nm+'_ROLL5',rolling5(z))
-    print('GFRAC_SWEEP_HH')
-    for gf in [0,.25,.5,.75,1.0]:
-        z=sim(start,mfkey,gold_actual,True,True,gf,cashkey,False); print(gf,met(z))
-    # weekly robustness for HH only
-    print('HH_WEEKLY',met(sim(start,mfkey,gold_actual,True,True,.5,cashkey,True)))
+        z=sim(start,mfkey,gold_actual,bool(qh),bool(gh),.5,cashkey); print(nm,met(z)); print(nm+'_ROLL5',rolling5(z))
+    print('GFRAC_FINE_HH')
+    for gf in [0,.25,.4,.5,.6,.65,.7,.75,.8,.85,.9,1.0]:
+        print(gf,met(sim(start,mfkey,gold_actual,True,True,gf,cashkey)))
 
-# actual-ish: actual Korean hedged gold, systematic MF with consistent process from 2010
 report('AQMIX_ACTUAL_GOLDH_2010','2010-01-05','AQMIX',True,'BIL')
-# alternate managed futures implementation
 report('WTMF_ACTUAL_GOLDH_2011','2011-01-05','WTMF',True,'BIL')
-# near-20y structural proxy. RYMTX has managed-futures history from 2007 but methodology changed pre-2013.
 report('RYMTX_IDEAL_GOLDH_2007','2007-05-25','RYMTX',False,'BIL')
-# actual DBMF sanity window with actual SGOV where available
 report('DBMF_ACTUAL_GOLDH_2020','2020-05-26','DBMF',True,'SGOV')
