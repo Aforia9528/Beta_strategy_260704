@@ -25,7 +25,7 @@ jobs:
           p=Path('analysis_30y_synthetic_dotcom.py')
           s=p.read_text()
           old="rg=requests.get(STOOQ_GOLD,headers={'User-Agent':'Mozilla/5.0'},timeout=45);rg.raise_for_status()\ngold_df=pd.read_csv(io.StringIO(rg.text));gold_df.columns=[c.capitalize() for c in gold_df.columns];gold_df['Date']=pd.to_datetime(gold_df.Date);gold=gold_df.set_index('Date')['Close'].astype(float).sort_index();gold=gold.loc[gold.index>=pd.Timestamp(START)]"
-          new="gold=fred('GOLDAMGBD228NLBM');gold=gold.loc[gold.index>=pd.Timestamp(START)]"
+          new="gold_df=pd.read_csv('https://raw.githubusercontent.com/datasets/gold-prices/main/data/monthly.csv');gold_df['Date']=pd.to_datetime(gold_df['Date'])+pd.offsets.MonthEnd(0);gold=gold_df.set_index('Date')['Price'].astype(float).sort_index();gold=gold.loc[gold.index>=pd.Timestamp(START)]"
           if old not in s:
               raise SystemExit('gold source block not found')
           p.write_text(s.replace(old,new))
