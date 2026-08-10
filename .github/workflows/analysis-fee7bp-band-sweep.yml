@@ -1,0 +1,27 @@
+name: analysis-fee7bp-band-sweep
+on:
+  push:
+    branches: [analysis-kodex-409820-20260809]
+    paths:
+      - analysis_fee7bp_band_sweep.py
+      - .github/workflows/analysis-fee7bp-band-sweep.yml
+permissions:
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: analysis-kodex-409820-20260809
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install --quiet yfinance pandas numpy
+      - run: python analysis_fee7bp_band_sweep.py > analysis_fee7bp_band_sweep_result.txt
+      - run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add analysis_fee7bp_band_sweep_result.txt
+          git commit -m 'analysis: save 7bp fee band sweep results' || exit 0
+          git push origin HEAD:analysis-kodex-409820-20260809
