@@ -45,21 +45,17 @@ for lab,st,mf,ca,act in SETS:
  R=Rframe(st,mf,ca,act);RES[lab]={};print('\nSET',lab)
  for n,(p,ng) in CANDS.items():
   m=met(sim(R,p,ng));RES[lab][n]=m;print(n,json.dumps(m))
-# aggregate deltas vs base for core and actual sets
 for group,ss in [('CORE',['AQ','WT','RY','DB']),('ACTUALG',['AQ_ACT','DB_ACT'])]:
  print('\nAGG',group)
  for n in CANDS:
   ds={k:float(np.mean([RES[s][n][k]-RES[s]['BASE'][k] for s in ss])) for k in ['CAGR','Vol','Sharpe','MDD','Calmar','TradesYr','TurnYr']};print(n,json.dumps(ds))
-# Leave-one-calendar-year-out robustness for finalists on AQ actual-gold and structural GLD
 FIN=['BASE','BAND_0.070','BAND_0.075','BAND_0.080','HCAP_0.70','H0.70_B0.075','NO_GATE']
 for label,actual in [('LOYO_STRUCT',False),('LOYO_ACTUALG',True)]:
- R=Rframe('2010-10-04','aq','bil',actual);Z={n:sim(R,*CANDS[n]) if False else None for n in []}
- print('\n',label)
- full={n:sim(R,CANDS[n][0],CANDS[n][1]) for n in FIN};years=sorted(set(full['BASE'].index.year))
+ R=Rframe('2010-10-04','aq','bil',actual);print('\n',label);full={n:sim(R,CANDS[n][0],CANDS[n][1]) for n in FIN};years=sorted(set(full['BASE'].index.year))
  for n in FIN:
   winsS=winsC=0;ds=[]
   for y in years:
    def sm(z):
     q=z[z.index.year!=y]; rr=q.r; eq=(1+rr).cumprod(); yrs=(q.index[-1]-q.index[0]).days/365.25;ppy=len(q)/yrs;c=eq.iloc[-1]**(1/yrs)-1;v=rr.std()*np.sqrt(ppy);m=(eq/eq.cummax()-1).min();return c,rr.mean()*ppy/v,c/abs(m)
-   a=sm(full[n]);b=sm(full['BASE']);winsS+=a[1]>b[1];winsC+=a[2]>b[2];ds.append([a[i]-b[i] for i in range(3)])
-  arr=np.array(ds);print(n,json.dumps({'n':len(years),'SharpeWin':winsS,'CalmarWin':winsC,'median_dCAGR':float(np.median(arr[:,0])),'median_dSharpe':float(np.median(arr[:,1])),'median_dCalmar':float(np.median(arr[:,2]))}))
+   a=sm(full[n]);b=sm(full['BASE']);winsS+=int(a[1]>b[1]);winsC+=int(a[2]>b[2]);ds.append([a[i]-b[i] for i in range(3)])
+  arr=np.array(ds);print(n,json.dumps({'n':int(len(years)),'SharpeWin':int(winsS),'CalmarWin':int(winsC),'median_dCAGR':float(np.median(arr[:,0])),'median_dSharpe':float(np.median(arr[:,1])),'median_dCalmar':float(np.median(arr[:,2]))}))
