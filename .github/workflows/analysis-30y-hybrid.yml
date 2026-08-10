@@ -24,6 +24,6 @@ jobs:
       - run: |
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
-          git add analysis_30y_hybrid_result.txt analysis_30y_hybrid_summary.csv
+          git add analysis_30y_hybrid_result.txt analysis_30y_hybrid_summary.csv analysis_30y_hybrid_base_monthly.csv
           git commit -m 'analysis: save hybrid 30y validation results' || exit 0
           git push origin HEAD:analysis-kodex-409820-20260809
