@@ -1,13 +1,12 @@
-import json, math
+import json, math, io
 import numpy as np
 import pandas as pd
 import yfinance as yf
+import requests
 
 END='2026-07-01'
 TICKERS={
-# mutual funds / alt funds
 'QNZNX':'AQR Trend Total Return N','QDSIX':'AQR Diversifying Strategies I','QMNIX':'AQR Equity Market Neutral I','QSPIX':'AQR Style Premia Alternative I','QRPIX':'AQR Alternative Risk Premia I','AQMIX':'AQR Managed Futures I','AQRIX':'AQR Multi-Asset I','QLEIX':'AQR Long-Short Equity I','ADAIX':'AQR Diversified Arbitrage I','AUEIX':'AQR Large Cap Defensive I','BLNDX':'Standpoint Multi-Asset Inst','REMIX':'Standpoint Multi-Asset Investor','ASFYX':'AlphaSimplex Managed Futures Y','MBXIX':'Catalyst Millburn Hedge Strategy I','ABYIX':'Abbey Capital Futures Strategy I',
-# US ETFs / exchange-traded implementations
 'DBMF':'iMGP DBi Managed Futures ETF','KMLM':'KFA Mount Lucas Managed Futures ETF','WTMF':'WisdomTree Managed Futures Strategy ETF','QAI':'IQ Hedge Multi-Strategy Tracker ETF','BTAL':'AGF US Market Neutral Anti-Beta ETF','PHDG':'Invesco S&P 500 Downside Hedged ETF','RPAR':'RPAR Risk Parity ETF','SWAN':'Amplify BlackSwan Growth & Treasury Core ETF','TAIL':'Cambria Tail Risk ETF','CAOS':'Alpha Architect Tail Risk ETF','CTA':'Simplify Managed Futures Strategy ETF','RSST':'Return Stacked US Stocks & Managed Futures ETF','RSBT':'Return Stacked Bonds & Managed Futures ETF','RSSB':'Return Stacked Global Stocks & Bonds ETF','GDE':'WisdomTree Efficient Gold Plus Equity Strategy Fund'}
 
 def dl(t):
@@ -18,12 +17,15 @@ def dl(t):
     except Exception:
         return pd.Series(dtype=float)
 
-irx=dl('^IRX')/100.0
+def fred_dtb3():
+    u='https://fred.stlouisfed.org/graph/fredgraph.csv?id=DTB3'
+    r=requests.get(u,timeout=30,headers={'User-Agent':'Mozilla/5.0'});r.raise_for_status()
+    d=pd.read_csv(io.StringIO(r.text));d.columns=['Date','Yield'];d['Date']=pd.to_datetime(d.Date);d['Yield']=pd.to_numeric(d.Yield,errors='coerce')/100
+    return d.set_index('Date').Yield.dropna().sort_index()
+rf_daily=fred_dtb3()
 
 def monthly_rf(idx):
-    if irx.empty:return pd.Series(0,index=idx)
-    d=irx.reindex(pd.date_range(irx.index.min(),pd.Timestamp(END),freq='D')).ffill()
-    m=(1+d.resample('ME').mean())**(1/12)-1
+    y=rf_daily.resample('ME').mean();m=(1+y)**(1/12)-1
     return m.reindex(idx).ffill().bfill()
 
 def metrics(px,start=None):
@@ -33,7 +35,7 @@ def metrics(px,start=None):
     rf=monthly_rf(m.index);ex=m-rf
     yrs=(m.index[-1]-m.index[0]).days/365.25
     eq=(1+m).cumprod();c=float(eq.iloc[-1]**(1/yrs)-1);vol=float(m.std(ddof=1)*np.sqrt(12));sh0=float(m.mean()*12/vol);she=float(ex.mean()*12/(ex.std(ddof=1)*np.sqrt(12)));dd=float((eq/eq.cummax()-1).min());cal=float(c/abs(dd)) if dd<0 else np.nan
-    return {'Years':yrs,'Start':str(m.index[0].date()),'End':str(m.index[-1].date()),'CAGR':c,'Vol':vol,'Sharpe0':sh0,'SharpeExcess':she,'MDD':dd,'Calmar':cal,'NMonths':len(m)}
+    return {'Years':yrs,'Start':str(m.index[0].date()),'End':str(m.index[-1].date()),'CAGR':c,'Vol':vol,'Sharpe0':sh0,'SharpeExcess':she,'AvgRFAnnApprox':float(rf.mean()*12),'MDD':dd,'Calmar':cal,'NMonths':len(m)}
 rows=[]
 for t,n in TICKERS.items():
     px=dl(t)
