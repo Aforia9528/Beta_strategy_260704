@@ -1,0 +1,27 @@
+name: analysis-aqr-published-period-compare
+on:
+  push:
+    branches: [analysis-kodex-409820-20260809]
+    paths:
+      - analysis_aqr_published_period_compare.py
+      - .github/workflows/analysis-aqr-published-period-compare.yml
+permissions:
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: analysis-kodex-409820-20260809
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install --quiet yfinance pandas numpy
+      - run: python analysis_aqr_published_period_compare.py > analysis_aqr_published_period_compare_result.txt
+      - run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add analysis_aqr_published_period_compare_result.txt
+          git commit -m 'analysis: save AQR published-period comparison' || exit 0
+          git push origin HEAD:analysis-kodex-409820-20260809
