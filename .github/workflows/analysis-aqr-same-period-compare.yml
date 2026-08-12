@@ -18,7 +18,7 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install --quiet yfinance pandas numpy
-      - run: python analysis_aqr_same_period_compare.py > analysis_aqr_same_period_compare_result.txt
+      - run: python analysis_aqr_same_period_compare.py > analysis_aqr_same_period_compare_result.txt 2>&1 || true
       - run: |
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
