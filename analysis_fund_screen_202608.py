@@ -1,8 +1,7 @@
-import json, math, io
+import json, math
 import numpy as np
 import pandas as pd
 import yfinance as yf
-import requests
 
 END='2026-07-01'
 TICKERS={
@@ -17,16 +16,11 @@ def dl(t):
     except Exception:
         return pd.Series(dtype=float)
 
-def fred_dtb3():
-    u='https://fred.stlouisfed.org/graph/fredgraph.csv?id=DTB3'
-    r=requests.get(u,timeout=30,headers={'User-Agent':'Mozilla/5.0'});r.raise_for_status()
-    d=pd.read_csv(io.StringIO(r.text));d.columns=['Date','Yield'];d['Date']=pd.to_datetime(d.Date);d['Yield']=pd.to_numeric(d.Yield,errors='coerce')/100
-    return d.set_index('Date').Yield.dropna().sort_index()
-rf_daily=fred_dtb3()
+bil=dl('BIL')
+bil_m=bil.resample('ME').last().pct_change().dropna()
 
 def monthly_rf(idx):
-    y=rf_daily.resample('ME').mean();m=(1+y)**(1/12)-1
-    return m.reindex(idx).ffill().bfill()
+    return bil_m.reindex(idx).ffill().bfill()
 
 def metrics(px,start=None):
     if start is not None:px=px.loc[px.index>=pd.Timestamp(start)]
@@ -35,7 +29,7 @@ def metrics(px,start=None):
     rf=monthly_rf(m.index);ex=m-rf
     yrs=(m.index[-1]-m.index[0]).days/365.25
     eq=(1+m).cumprod();c=float(eq.iloc[-1]**(1/yrs)-1);vol=float(m.std(ddof=1)*np.sqrt(12));sh0=float(m.mean()*12/vol);she=float(ex.mean()*12/(ex.std(ddof=1)*np.sqrt(12)));dd=float((eq/eq.cummax()-1).min());cal=float(c/abs(dd)) if dd<0 else np.nan
-    return {'Years':yrs,'Start':str(m.index[0].date()),'End':str(m.index[-1].date()),'CAGR':c,'Vol':vol,'Sharpe0':sh0,'SharpeExcess':she,'AvgRFAnnApprox':float(rf.mean()*12),'MDD':dd,'Calmar':cal,'NMonths':len(m)}
+    return {'Years':yrs,'Start':str(m.index[0].date()),'End':str(m.index[-1].date()),'CAGR':c,'Vol':vol,'Sharpe0':sh0,'SharpeExcess':she,'AvgBILAnnArithmetic':float(rf.mean()*12),'MDD':dd,'Calmar':cal,'NMonths':len(m)}
 rows=[]
 for t,n in TICKERS.items():
     px=dl(t)
