@@ -1,0 +1,27 @@
+name: analysis-fund-daily-mdd-check
+on:
+  push:
+    branches: [analysis-kodex-409820-20260809]
+    paths:
+      - analysis_fund_daily_mdd_check.py
+      - .github/workflows/analysis-fund-daily-mdd-check.yml
+permissions:
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: analysis-kodex-409820-20260809
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install --quiet yfinance pandas numpy
+      - run: python analysis_fund_daily_mdd_check.py > analysis_fund_daily_mdd_check_result.txt
+      - run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add analysis_fund_daily_mdd_check_result.txt
+          git commit -m 'analysis: save daily drawdown check' || exit 0
+          git push origin HEAD:analysis-kodex-409820-20260809
